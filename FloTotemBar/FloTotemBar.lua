@@ -440,7 +440,13 @@ function FloTotemBar_SetupSpell(self, spell, pos)
 		algo = FloTotemBar_CheckTrapLife;
 	end
 
-	self.spells[pos] = { name = spell.name, duration = duration, algo = algo, school = spell.school };
+	-- Project Ascension: When using dynamic discovery, assign school numbers sequentially for traps
+	local school = spell.school;
+	if not school and self.totemtype == "TRAP" then
+		school = pos; -- Use position as school number (1, 2, 3, etc.)
+	end
+
+	self.spells[pos] = { name = spell.name, duration = duration, algo = algo, school = school };
 
 end
 
