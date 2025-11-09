@@ -1,0 +1,92 @@
+name: Bug Report
+description: Report a bug or issue with FloTotemBar
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us fix it.
+
+  - type: dropdown
+    id: server-type
+    attributes:
+      label: Server Type
+      description: Which Project Ascension server are you playing on?
+      options:
+        - Wildcard
+        - Classless
+        - Classic+
+        - Other/Unknown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: class
+    attributes:
+      label: Character Class
+      description: What class are you playing?
+      options:
+        - Hunter (Traps)
+        - Shaman (Totems)
+        - Other/Hybrid
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear description of what the bug is
+      placeholder: The trap bar doesn't show Freezing Trap...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: The trap bar should display all my traps...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Log in as Hunter
+        2. Open spellbook
+        3. Notice trap is missing from bar
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostic
+    attributes:
+      label: Diagnostic Output
+      description: Run `/run FloBarDiagnostic()` in-game and paste the chat output here
+      placeholder: Paste diagnostic output here...
+      render: text
+
+  - type: input
+    id: addon-version
+    attributes:
+      label: Addon Version
+      description: What version of FloTotemBar are you using?
+      placeholder: v1.0.0 or commit hash
+
+  - type: textarea
+    id: other-addons
+    attributes:
+      label: Other Addons
+      description: List any other addons you have installed (especially UI/bar addons)
+      placeholder: Bartender, Bagnon, etc.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information
+      description: Any other context, screenshots, or information about the problem

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/CTOUT/FloTotemBar/blob/main/README.md
+    about: Check the README for usage instructions and examples
+  - name: 📋 Installation Guide
+    url: https://github.com/CTOUT/FloTotemBar/blob/main/INSTALLATION_GUIDE.md
+    about: Detailed installation instructions for Project Ascension
