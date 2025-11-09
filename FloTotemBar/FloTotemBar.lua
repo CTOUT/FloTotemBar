@@ -726,17 +726,24 @@ function FloTotemBar_OnUpdate(self)
 			if self["activeSpell"..k] == i then
 
 				countdown = _G[name.."Countdown"..k];
-				_, duration = countdown:GetMinMaxValues();
-
-				timeleft = self["startTime"..k] + duration - GetTime();
-				isActive = timeleft > 0;
-
-				if (isActive) then
-					countdown:SetValue(timeleft);
-					break;
-				else
+				
+				-- Project Ascension: Skip if countdown element doesn't exist
+				-- (e.g., TRAP bars don't have Countdown"" element)
+				if not countdown then
 					self["activeSpell"..k] = nil;
-					countdown:SetValue(0);
+				else
+					_, duration = countdown:GetMinMaxValues();
+
+					timeleft = self["startTime"..k] + duration - GetTime();
+					isActive = timeleft > 0;
+
+					if (isActive) then
+						countdown:SetValue(timeleft);
+						break;
+					else
+						self["activeSpell"..k] = nil;
+						countdown:SetValue(0);
+					end
 				end
 			end
 		end
