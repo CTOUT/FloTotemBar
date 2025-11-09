@@ -14,10 +14,15 @@ A comprehensive addon that provides convenient bars for Hunter traps and Shaman 
 
 ## Installation
 
+> **Note:** The repository contains the addon files in a `FloTotemBar` subfolder. Copy the **inner** folder to your AddOns directory.
+
 1. Download the addon
-2. Extract to your `World of Warcraft/Interface/AddOns/` folder
-3. Restart WoW or reload UI (`/reload`)
-4. The trap/totem bars will appear automatically based on your class
+2. Extract the **inner** `FloTotemBar` folder to your `World of Warcraft/Interface/AddOns/` folder
+3. You should have: `Interface/AddOns/FloTotemBar/FloTotemBar.toc`
+4. Restart WoW or reload UI (`/reload`)
+5. The trap/totem bars will appear automatically based on your class
+
+For detailed installation instructions, see [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
 
 ## Usage
 

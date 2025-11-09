@@ -19,12 +19,17 @@ git clone https://github.com/CTOUT/FloTotemBar.git
 
 ### Step 2: Install
 
+**From ZIP file:**
 1. Locate your World of Warcraft folder (usually `C:\Program Files (x86)\World of Warcraft\`)
 2. Navigate to `Interface\AddOns\`
-3. Extract both addon folders here
-4. You should have:
-   - `Interface\AddOns\FloAspectBar\`
-   - `Interface\AddOns\FloTotemBar\`
+3. Extract the addon folders from the ZIP (they contain a subfolder with the same name)
+4. Copy the **inner** `FloTotemBar` folder to `Interface\AddOns\`
+5. You should have: `Interface\AddOns\FloTotemBar\FloTotemBar.toc`
+
+**From Git clone:**
+1. The repository has the addon files in a subfolder
+2. Copy `FloTotemBar\FloTotemBar\` to `Interface\AddOns\FloTotemBar\`
+3. You should have: `Interface\AddOns\FloTotemBar\FloTotemBar.toc`
 
 ### Step 3: Enable in Game
 
