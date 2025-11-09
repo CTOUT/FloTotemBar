@@ -677,7 +677,8 @@ function FloTotemBar_StartTimer(self, spellName, rank)
 			else
 				duration = self.spells[i].duration;
 				startTime = GetTime();
-				school = self.spells[i].school;
+				-- Project Ascension: school may be nil when using dynamic discovery
+				school = self.spells[i].school or "";
 			end
 			break;
 		end
