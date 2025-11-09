@@ -1,10 +1,11 @@
-## Interface: 90205
+## Interface: 30300
 ## Title: FloTotemBar
 ## Author: Floraline
 ## Notes: Add some bars for casting of totems/traps, with timers showing the remaining life time of the objects
-## OptionalDeps: ButtonFacade
+## OptionalDeps: 
 ## Dependencies:
 ## SavedVariables: 
 ## SavedVariablesPerCharacter: FLOTOTEMBAR_OPTIONS
+diagnostic.lua
 FloLib.xml
 FloTotemBar.xml

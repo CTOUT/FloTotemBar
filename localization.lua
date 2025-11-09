@@ -1,7 +1,3 @@
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this file,
--- You can obtain one at http://mozilla.org/MPL/2.0/.
-
 -------------------------------------------------------------------------------
 -- English localization (Default)
 -------------------------------------------------------------------------------
@@ -18,7 +14,6 @@ BINDING_NAME_FLOTOTEMEARTHBUTTON7 = "Earth/Trap Button 7";
 BINDING_NAME_FLOTOTEMEARTHBUTTON8 = "Earth/Trap Button 8";
 BINDING_NAME_FLOTOTEMEARTHBUTTON9 = "Earth/Trap Button 9";
 BINDING_NAME_FLOTOTEMEARTHBUTTON10 = "Earth/Trap Button 10";
-
 BINDING_HEADER_FLOTOTEMFIRE = "Floraline's Fire Bar";
 BINDING_NAME_FLOTOTEMFIREBUTTON1 = "Fire Button 1";
 BINDING_NAME_FLOTOTEMFIREBUTTON2 = "Fire Button 2";
@@ -60,10 +55,6 @@ FLO_TOTEM_4ROWS = "4 Rows - Downwards";
 FLO_TOTEM_2ROWS_REVERSE = "2 Rows - Upwards";
 FLO_TOTEM_4ROWS_REVERSE = "4 Rows - Upwards";
 
--- Tooltips
-FLO_TOTEM_ADD_CALL_TOOLTIP = "<Left-Click to Add this Totem to %s>";
-FLO_TOTEM_REMOVE_CALL_TOOLTIP = "<Alt-Click to Remove this Totem from %s>";
-
 -------------------------------------------------------------------------------
 -- French localization
 -------------------------------------------------------------------------------
@@ -82,7 +73,6 @@ BINDING_NAME_FLOTOTEMEARTHBUTTON7 = "Bouton de la terre / de piège 7";
 BINDING_NAME_FLOTOTEMEARTHBUTTON8 = "Bouton de la terre / de piège 8";
 BINDING_NAME_FLOTOTEMEARTHBUTTON9 = "Bouton de la terre / de piège 9";
 BINDING_NAME_FLOTOTEMEARTHBUTTON10 = "Bouton de la terre / de piège 10";
-
 BINDING_HEADER_FLOTOTEMFIRE = "Barre du feu de Floraline";
 BINDING_NAME_FLOTOTEMFIREBUTTON1 = "Bouton du feu 1";
 BINDING_NAME_FLOTOTEMFIREBUTTON2 = "Bouton du feu 2";
@@ -124,10 +114,6 @@ FLO_TOTEM_4ROWS = "4 lignes - vers le bas";
 FLO_TOTEM_2ROWS_REVERSE = "2 lignes - vers le haut";
 FLO_TOTEM_4ROWS_REVERSE = "4 lignes - vers le haut";
 
--- Tooltips
-FLO_TOTEM_ADD_CALL_TOOLTIP = "<Clic gauche pour ajouter ce totem à l'%s>";
-FLO_TOTEM_REMOVE_CALL_TOOLTIP = "<Alt + Clic gauche pour enlever ce totem de l'%s>";
-
 end
 
 -------------------------------------------------------------------------------
@@ -148,7 +134,6 @@ BINDING_NAME_FLOTOTEMEARTHBUTTON7 = "Erdbutton/Fallesbutton 7";
 BINDING_NAME_FLOTOTEMEARTHBUTTON8 = "Erdbutton/Fallesbutton 8";
 BINDING_NAME_FLOTOTEMEARTHBUTTON9 = "Erdbutton/Fallesbutton 9";
 BINDING_NAME_FLOTOTEMEARTHBUTTON10 = "Erdbutton/Fallesbutton 10";
-
 BINDING_HEADER_FLOTOTEMFIRE = "Floralines Feuerleiste";
 BINDING_NAME_FLOTOTEMFIREBUTTON1 = "Feuerbutton 1";
 BINDING_NAME_FLOTOTEMFIREBUTTON2 = "Feuerbutton 2";
@@ -260,57 +245,57 @@ end
 if (GetLocale() == "ruRU") then
 
 -- Bindings
-BINDING_HEADER_FLOTOTEMEARTH = "Панели Земли/Ловушек - Floraline";
-BINDING_NAME_FLOTOTEMEARTHBUTTON1 = "Земли/Ловушки: кнопка 1";
-BINDING_NAME_FLOTOTEMEARTHBUTTON2 = "Земли/Ловушки: кнопка 2";
-BINDING_NAME_FLOTOTEMEARTHBUTTON3 = "Земли/Ловушки: кнопка 3";
-BINDING_NAME_FLOTOTEMEARTHBUTTON4 = "Земли/Ловушки: кнопка 4";
-BINDING_NAME_FLOTOTEMEARTHBUTTON5 = "Земли/Ловушки: кнопка 5";
-BINDING_NAME_FLOTOTEMEARTHBUTTON6 = "Земли/Ловушки: кнопка 6";
-BINDING_NAME_FLOTOTEMEARTHBUTTON7 = "Земли/Ловушки: кнопка 7";
-BINDING_NAME_FLOTOTEMEARTHBUTTON8 = "Земли/Ловушки: кнопка 8";
-BINDING_NAME_FLOTOTEMEARTHBUTTON9 = "Земли/Ловушки: кнопка 9";
-BINDING_NAME_FLOTOTEMEARTHBUTTON10 = "Земли/Ловушки: кнопка 10";
-BINDING_HEADER_FLOTOTEMFIRE = "Панели огня - Floraline";
-BINDING_NAME_FLOTOTEMFIREBUTTON1 = "Огоня: кнопка 1";
-BINDING_NAME_FLOTOTEMFIREBUTTON2 = "Огоня: кнопка 2";
-BINDING_NAME_FLOTOTEMFIREBUTTON3 = "Огоня: кнопка 3";
-BINDING_NAME_FLOTOTEMFIREBUTTON4 = "Огоня: кнопка 4";
-BINDING_NAME_FLOTOTEMFIREBUTTON5 = "Огоня: кнопка 5";
-BINDING_NAME_FLOTOTEMFIREBUTTON6 = "Огоня: кнопка 6";
-BINDING_NAME_FLOTOTEMFIREBUTTON7 = "Огоня: кнопка 7";
-BINDING_NAME_FLOTOTEMFIREBUTTON8 = "Огоня: кнопка 8";
-BINDING_NAME_FLOTOTEMFIREBUTTON9 = "Огоня: кнопка 9";
-BINDING_NAME_FLOTOTEMFIREBUTTON10 = "Огоня: кнопка 10";
-BINDING_HEADER_FLOTOTEMWATER = "Панели воды - Floraline";
-BINDING_NAME_FLOTOTEMWATERBUTTON1 = "Воды: кнопка 1";
-BINDING_NAME_FLOTOTEMWATERBUTTON2 = "Воды: кнопка 2";
-BINDING_NAME_FLOTOTEMWATERBUTTON3 = "Воды: кнопка 3";
-BINDING_NAME_FLOTOTEMWATERBUTTON4 = "Воды: кнопка 4";
-BINDING_NAME_FLOTOTEMWATERBUTTON5 = "Воды: кнопка 5";
-BINDING_NAME_FLOTOTEMWATERBUTTON6 = "Воды: кнопка 6";
-BINDING_NAME_FLOTOTEMWATERBUTTON7 = "Воды: кнопка 7";
-BINDING_NAME_FLOTOTEMWATERBUTTON8 = "Воды: кнопка 8";
-BINDING_NAME_FLOTOTEMWATERBUTTON9 = "Воды: кнопка 9";
-BINDING_NAME_FLOTOTEMWATERBUTTON10 = "Воды: кнопка 10";
-BINDING_HEADER_FLOTOTEMAIR = "Панели воздуха - Floraline";
-BINDING_NAME_FLOTOTEMAIRBUTTON1 = "Воздуха: кнопка 1";
-BINDING_NAME_FLOTOTEMAIRBUTTON2 = "Воздуха: кнопка 2";
-BINDING_NAME_FLOTOTEMAIRBUTTON3 = "Воздуха: кнопка 3";
-BINDING_NAME_FLOTOTEMAIRBUTTON4 = "Воздуха: кнопка 4";
-BINDING_NAME_FLOTOTEMAIRBUTTON5 = "Воздуха: кнопка 5";
-BINDING_NAME_FLOTOTEMAIRBUTTON6 = "Воздуха: кнопка 6";
-BINDING_NAME_FLOTOTEMAIRBUTTON7 = "Воздуха: кнопка 7";
-BINDING_NAME_FLOTOTEMAIRBUTTON8 = "Воздуха: кнопка 8";
-BINDING_NAME_FLOTOTEMAIRBUTTON9 = "Воздуха: кнопка 9";
-BINDING_NAME_FLOTOTEMAIRBUTTON10 = "Воздуха: кнопка 10";
+BINDING_HEADER_FLOTOTEMEARTH = "Floraline's Earth/Trap Bar";
+BINDING_NAME_FLOTOTEMEARTHBUTTON1 = "Earth/Trap Button 1";
+BINDING_NAME_FLOTOTEMEARTHBUTTON2 = "Earth/Trap Button 2";
+BINDING_NAME_FLOTOTEMEARTHBUTTON3 = "Earth/Trap Button 3";
+BINDING_NAME_FLOTOTEMEARTHBUTTON4 = "Earth/Trap Button 4";
+BINDING_NAME_FLOTOTEMEARTHBUTTON5 = "Earth/Trap Button 5";
+BINDING_NAME_FLOTOTEMEARTHBUTTON6 = "Earth/Trap Button 6";
+BINDING_NAME_FLOTOTEMEARTHBUTTON7 = "Earth/Trap Button 7";
+BINDING_NAME_FLOTOTEMEARTHBUTTON8 = "Earth/Trap Button 8";
+BINDING_NAME_FLOTOTEMEARTHBUTTON9 = "Earth/Trap Button 9";
+BINDING_NAME_FLOTOTEMEARTHBUTTON10 = "Earth/Trap Button 10";
+BINDING_HEADER_FLOTOTEMFIRE = "Floraline's Fire Bar";
+BINDING_NAME_FLOTOTEMFIREBUTTON1 = "Fire Button 1";
+BINDING_NAME_FLOTOTEMFIREBUTTON2 = "Fire Button 2";
+BINDING_NAME_FLOTOTEMFIREBUTTON3 = "Fire Button 3";
+BINDING_NAME_FLOTOTEMFIREBUTTON4 = "Fire Button 4";
+BINDING_NAME_FLOTOTEMFIREBUTTON5 = "Fire Button 5";
+BINDING_NAME_FLOTOTEMFIREBUTTON6 = "Fire Button 6";
+BINDING_NAME_FLOTOTEMFIREBUTTON7 = "Fire Button 7";
+BINDING_NAME_FLOTOTEMFIREBUTTON8 = "Fire Button 8";
+BINDING_NAME_FLOTOTEMFIREBUTTON9 = "Fire Button 9";
+BINDING_NAME_FLOTOTEMFIREBUTTON10 = "Fire Button 10";
+BINDING_HEADER_FLOTOTEMWATER = "Floraline's Water Bar";
+BINDING_NAME_FLOTOTEMWATERBUTTON1 = "Water Button 1";
+BINDING_NAME_FLOTOTEMWATERBUTTON2 = "Water Button 2";
+BINDING_NAME_FLOTOTEMWATERBUTTON3 = "Water Button 3";
+BINDING_NAME_FLOTOTEMWATERBUTTON4 = "Water Button 4";
+BINDING_NAME_FLOTOTEMWATERBUTTON5 = "Water Button 5";
+BINDING_NAME_FLOTOTEMWATERBUTTON6 = "Water Button 6";
+BINDING_NAME_FLOTOTEMWATERBUTTON7 = "Water Button 7";
+BINDING_NAME_FLOTOTEMWATERBUTTON8 = "Water Button 8";
+BINDING_NAME_FLOTOTEMWATERBUTTON9 = "Water Button 9";
+BINDING_NAME_FLOTOTEMWATERBUTTON10 = "Water Button 10";
+BINDING_HEADER_FLOTOTEMAIR = "Floraline's Air Bar";
+BINDING_NAME_FLOTOTEMAIRBUTTON1 = "Air Button 1";
+BINDING_NAME_FLOTOTEMAIRBUTTON2 = "Air Button 2";
+BINDING_NAME_FLOTOTEMAIRBUTTON3 = "Air Button 3";
+BINDING_NAME_FLOTOTEMAIRBUTTON4 = "Air Button 4";
+BINDING_NAME_FLOTOTEMAIRBUTTON5 = "Air Button 5";
+BINDING_NAME_FLOTOTEMAIRBUTTON6 = "Air Button 6";
+BINDING_NAME_FLOTOTEMAIRBUTTON7 = "Air Button 7";
+BINDING_NAME_FLOTOTEMAIRBUTTON8 = "Air Button 8";
+BINDING_NAME_FLOTOTEMAIRBUTTON9 = "Air Button 9";
+BINDING_NAME_FLOTOTEMAIRBUTTON10 = "Air Button 10";
 
 -- Layouts
-FLO_TOTEM_1ROW = "1 ряд";
-FLO_TOTEM_2ROWS = "2 ряда - вниз";
-FLO_TOTEM_4ROWS = "4 ряда - вниз";
-FLO_TOTEM_2ROWS_REVERSE = "2 ряда - вверх";
-FLO_TOTEM_4ROWS_REVERSE = "4 ряда - вверх";
+FLO_TOTEM_1ROW = "1 Row";
+FLO_TOTEM_2ROWS = "2 Rows - Downwards";
+FLO_TOTEM_4ROWS = "4 Rows - Downwards";
+FLO_TOTEM_2ROWS_REVERSE = "2 Rows - Upwards";
+FLO_TOTEM_4ROWS_REVERSE = "4 Rows - Upwards";
 
 end
 

@@ -1,30 +1,25 @@
--- This Source Code Form is subject to the terms of the Mozilla Public
--- License, v. 2.0. If a copy of the MPL was not distributed with this file,
--- You can obtain one at http://mozilla.org/MPL/2.0/.
-
 -------------------------------------------------------------------------------
 -- Constants
 -------------------------------------------------------------------------------
 
-local VERSION
-if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-	VERSION = "9.2.45.5"
-elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
-	VERSION = "1.14.45.3"
-end
+local VERSION = "3.3.0.16"
 
 -------------------------------------------------------------------------------
 -- Variables
 -------------------------------------------------------------------------------
-local _
 
-local ALGO_TRAP;
+local SCHOOL_COLORS = {
+	[""] = { 1.0, 0.7, 0.0 },
+	[1] = { 1.0, 0.3, 0.0 },
+	[2] = { 0.5, 0.5, 1.0 },
+	[3] = { 0.0, 1.0, 0.0 }
+};
 
 local SHOW_WELCOME = true;
 local FLOTOTEMBAR_OPTIONS_DEFAULT = { [1] = { scale = 1, borders = true, barLayout = "1row", barSettings = {} }, active = 1 };
 FLOTOTEMBAR_OPTIONS = FLOTOTEMBAR_OPTIONS_DEFAULT;
 local FLOTOTEMBAR_BARSETTINGS_DEFAULT = {
-	["SEAL"] = { buttonsOrder = {}, position = "auto", color = { 0.49, 0.49, 0, 0.7 }, hiddenSpells = {} },
+	["CALL"] = { buttonsOrder = {}, position = "auto", color = { 0.49, 0, 0.49, 0.7 }, hiddenSpells = {} },
 	["TRAP"] = { buttonsOrder = {}, position = "auto", color = { 0.49, 0.49, 0, 0.7 }, hiddenSpells = {} },
 	["EARTH"] = { buttonsOrder = {}, position = "auto", color = { 0, 0.49, 0, 0.7 }, hiddenSpells = {} },
 	["FIRE"] = { buttonsOrder = {}, position = "auto", color = { 0.49, 0, 0, 0.7 }, hiddenSpells = {} },
@@ -34,15 +29,10 @@ local FLOTOTEMBAR_BARSETTINGS_DEFAULT = {
 FLO_CLASS_NAME = nil;
 local ACTIVE_OPTIONS = FLOTOTEMBAR_OPTIONS[1];
 
+local FLO_TOTEMIC_CALL_SPELL = GetSpellInfo(TOTEM_MULTI_CAST_RECALL_SPELLS[1]);
+
 -- Ugly
 local changingSpec = true;
-
-local GetSpecialization = GetSpecialization;
-if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
-	GetSpecialization = function ()
-		return 1
-	end
-end
 
 -------------------------------------------------------------------------------
 -- Functions
@@ -51,34 +41,38 @@ end
 -- Executed on load, calls general set-up functions
 function FloTotemBar_OnLoad(self)
 
-	ALGO_TRAP = {
-		[1] = FloTotemBar_CheckTrapLife,
-		[2] = FloTotemBar_CheckTrapLife,
-		[3] = FloTotemBar_CheckTrapLife,
-		[4] = function() end
-	};
+	-- Re-anchor the first button, link it to the timer
+	local thisName = self:GetName();
+	local button = _G[thisName.."Button1"];
+
+	if thisName == "FloBarTRAP" then
+		button:SetPoint("LEFT", thisName.."Countdown3", "RIGHT", 5, 0);
+	elseif thisName ~= "FloBarCALL" then
+		button:SetPoint("LEFT", thisName.."Countdown", "RIGHT", 5, 0);
+	end
 
 	-- Class-based setup, abort if not supported
 	_, FLO_CLASS_NAME = UnitClass("player");
 	FLO_CLASS_NAME = strupper(FLO_CLASS_NAME);
 
 	local classSpells = FLO_TOTEM_SPELLS[FLO_CLASS_NAME];
-
-	if classSpells == nil then
-		return;
-	end
-
-	if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
-		self.sharedCooldown = true;
-	end
-
-	local thisName = self:GetName();
+	
 	self.totemtype = string.sub(thisName, 7);
 
-	-- Store the spell list for later
-	self.availableSpells = classSpells[self.totemtype];
-	if self.availableSpells == nil then
+	-- Project Ascension: Always use dynamic discovery for hunters with traps
+	-- The hardcoded spell IDs don't match Ascension's custom system
+	if FLO_CLASS_NAME == "HUNTER" and self.totemtype == "TRAP" then
+		self.availableSpells = {};
+		self.useDynamicDiscovery = true;
+	elseif classSpells == nil or classSpells[self.totemtype] == nil then
+		-- No spells defined for this class/type
 		return;
+	else
+		-- Store the spell list for later (for other classes like Shaman)
+		self.availableSpells = classSpells[self.totemtype];
+		if self.availableSpells == nil then
+			return;
+		end
 	end
 
 	-- Init the settings variable
@@ -88,14 +82,14 @@ function FloTotemBar_OnLoad(self)
 	self.SetupSpell = FloTotemBar_SetupSpell;
 	self.OnSetup = FloTotemBar_OnSetup;
 	self.menuHooks = { SetPosition = FloTotemBar_SetPosition, SetBorders = FloTotemBar_SetBorders };
-	if FLO_CLASS_NAME == "SHAMAN" and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+	if FLO_CLASS_NAME == "SHAMAN" then
+		if self.totemtype ~= "CALL" then
+			self.slot = _G[self.totemtype.."_TOTEM_SLOT"];
+			FloTotemBar_AddCallButtons(self);
+		end
 		self.menuHooks.SetLayoutMenu = FloTotemBar_SetLayoutMenu;
-		self.slot = _G[self.totemtype.."_TOTEM_SLOT"];
 	end
 	self:EnableMouse(1);
-	if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-		ExtraActionBarFrame:EnableMouse(false);
-	end
 
 	if SHOW_WELCOME then
 		DEFAULT_CHAT_FRAME:AddMessage( "FloTotemBar "..VERSION.." loaded." );
@@ -105,155 +99,108 @@ function FloTotemBar_OnLoad(self)
 		SLASH_FLOTOTEMBAR2 = "/ftb";
 		SlashCmdList["FLOTOTEMBAR"] = FloTotemBar_ReadCmd;
 
-		self:RegisterEvent("ADDON_LOADED");
-		if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-			self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED");
-		end
+		self:RegisterEvent("VARIABLES_LOADED");
+		self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED");
 		self:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED");
+
+		-- Hide default totem bar
+		if FLO_CLASS_NAME == "SHAMAN" then
+			MultiCastActionBarFrame:SetScript("OnShow", MultiCastActionBarFrame.Hide);
+		end
 	end
+	self:RegisterEvent("PLAYER_ENTERING_WORLD");
 	self:RegisterEvent("LEARNED_SPELL_IN_TAB");
 	self:RegisterEvent("CHARACTER_POINTS_CHANGED");
-	self:RegisterEvent("SPELLS_CHANGED");
+	self:RegisterEvent("PLAYER_ALIVE");
+	self:RegisterEvent("PLAYER_LEVEL_UP");
 	self:RegisterEvent("SPELL_UPDATE_COOLDOWN");
 	self:RegisterEvent("ACTIONBAR_UPDATE_USABLE");
 	self:RegisterEvent("UPDATE_BINDINGS");
 
 	if self.totemtype ~= "CALL" then
-		self:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player");
+		self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED");
 		self:RegisterEvent("PLAYER_DEAD");
 
 		-- Destruction detection
-		if FLO_CLASS_NAME == "SHAMAN" then
-			self:RegisterEvent("PLAYER_TOTEM_UPDATE");
-		else
+		if FLO_CLASS_NAME == "HUNTER" then
 			self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
+		else
+			self:RegisterEvent("PLAYER_TOTEM_UPDATE");
 		end
 	end
 end
 
+function FloTotemBar_AddCallButtons(self)
+
+	local button, callButton;
+	for i = 1, 10 do
+		button = _G[self:GetName().."Button"..i];
+
+		callButton = CreateFrame("Button", "$parentFIRE", button, "FloSwitchButtonTemplate");
+		callButton:SetPoint("BOTTOMLEFT", button, "TOPLEFT", -2, -2);
+		callButton.callElement = "FIRE";
+		callButton:SetAttribute("action", FloSwitchButton_GetActionID(callButton));
+
+		callButton = CreateFrame("Button", "$parentWATER", button, "FloSwitchButtonTemplate");
+		callButton:SetPoint("BOTTOM", button, "TOP", 0, -2);
+		callButton.callElement = "WATER";
+		callButton:SetAttribute("action", FloSwitchButton_GetActionID(callButton));
+
+		callButton = CreateFrame("Button", "$parentAIR", button, "FloSwitchButtonTemplate");
+		callButton:SetPoint("BOTTOMRIGHT", button, "TOPRIGHT", 2, -2);
+		callButton.callElement = "AIR";
+		callButton:SetAttribute("action", FloSwitchButton_GetActionID(callButton));
+
+		button:SetScript("OnEnter", FloTotemBar_OnEnter);
+		button:SetScript("OnLeave", FloTotemBar_OnLeave);
+	end
+end
+
+
 function FloTotemBar_OnEvent(self, event, arg1, ...)
 
-	if event == "LEARNED_SPELL_IN_TAB" or event == "CHARACTER_POINTS_CHANGED" or event == "SPELLS_CHANGED" then
+	if event == "PLAYER_ENTERING_WORLD" or event == "LEARNED_SPELL_IN_TAB" or event == "PLAYER_ALIVE" or event == "PLAYER_LEVEL_UP" or event == "CHARACTER_POINTS_CHANGED" then
 		if not changingSpec then
-			if GetSpecialization() ~= FLOTOTEMBAR_OPTIONS.active then
-				FloTotemBar_CheckTalentGroup(GetSpecialization());
-			else
-				FloLib_Setup(self);
-			end
+			FloLib_Setup(self);
 		end
 
-	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+	elseif event == "UNIT_SPELLCAST_SUCCEEDED"  then
 		if arg1 == "player" then
-			FloLib_StartTimer(self, ...);
+			FloTotemBar_StartTimer(self, ...);
 		end
 
 	elseif event == "UNIT_SPELLCAST_INTERRUPTED" then
-		local _, spellId = ...;
-		local spellName = GetSpellInfo(spellId);
-		if arg1 == "player" and spellName == FLOLIB_ACTIVATE_SPEC then
+		local spellName = ...;
+		if arg1 == "player" and (spellName == FLOLIB_ACTIVATE_SPEC_1 or spellName == FLOLIB_ACTIVATE_SPEC_2) then
 			changingSpec = false;
 		end
 
 	elseif event == "SPELL_UPDATE_COOLDOWN" or event == "ACTIONBAR_UPDATE_USABLE" then
-		--FloTotemBar_TryAddFixupTrapAction();
 		FloLib_UpdateState(self);
 
 	elseif event == "PLAYER_DEAD" then
 		FloTotemBar_ResetTimers(self);
 
-	elseif (event == "ADDON_LOADED" and arg1 == "FloTotemBar") or event == "UPDATE_BINDINGS" then
-		if event == "ADDON_LOADED" then
-			FloTotemBar_CheckTalentGroup(FLOTOTEMBAR_OPTIONS.active);
+	elseif event == "VARIABLES_LOADED" then
+		FloTotemBar_MigrateVars();
+		FloTotemBar_CheckTalentGroup(FLOTOTEMBAR_OPTIONS.active);
 
-			-- Hook the UIParent_ManageFramePositions function
-			hooksecurefunc("UIParent_ManageFramePositions", FloTotemBar_UpdatePositions);
-			if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-				hooksecurefunc("SetSpecialization", function() changingSpec = true; end);
-			end
+		-- Hook the UIParent_ManageFramePositions function
+		hooksecurefunc("UIParent_ManageFramePositions", FloTotemBar_UpdatePositions);
+		hooksecurefunc("SetActiveTalentGroup", function() changingSpec = true; end);
+
+	elseif event == "UPDATE_BINDINGS" then
+		FloLib_UpdateBindings(self, "FLOTOTEM"..self.totemtype);
+
+	elseif event == "ACTIVE_TALENT_GROUP_CHANGED" then
+		if FLOTOTEMBAR_OPTIONS.active ~= arg1 then
+			FloTotemBar_TalentGroupChanged(arg1);
 		end
 
-		local totemtype = self.totemtype;
-		if totemtype == "TRAP" then totemtype = "EARTH" end
-		FloLib_UpdateBindings(self, "FLOTOTEM"..totemtype);
-
-	elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
-		local spec = GetSpecialization();
-		if arg1 == "player" and FLOTOTEMBAR_OPTIONS.active ~= spec then
-			FloTotemBar_TalentGroupChanged(spec);
-		end
-
-	elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
+	else
 		-- Events used for totem destruction detection
-		local pos;
-		for i = 1, #self.spells do
-			if self.sharedCooldown then
-				pos = 1
-			else
-				pos = i
-			end
-			if self["activeSpell"..pos] and i == self["activeSpell"..pos] then
-				self.spells[i].algo(self, i, CombatLogGetCurrentEventInfo());
-			end
-		end
-	elseif event == "PLAYER_TOTEM_UPDATE" then
-		-- Events used for totem destruction detection
-		local pos;
-		for i = 1, #self.spells do
-			if self.sharedCooldown then
-				pos = 1
-			else
-				pos = i
-			end
-			if arg1 and self["activeSpell"..pos] and i == self["activeSpell"..pos] then
-				self.spells[i].algo(self, arg1, i, ...);
-			end
-		end
-	end
-end
-
-function FloTotemBar_SetFixupTrap(pos)
-
-	ACTIVE_OPTIONS.baseActionTrap = pos;
-	for i = 1, #FLO_TOTEM_SPELLS.HUNTER.TRAP do
-		local name = GetSpellInfo(FLO_TOTEM_SPELLS.HUNTER.TRAP[i].id);
-		PickupSpellBookItem(name);
-		PlaceAction(pos - 1 + i);
-		ClearCursor();
-	end
-end
-
-function FloTotemBar_FindEmptyActions(qty)
-
-	local a, remain, start;
-
-	start = nil;
-	remain = qty;
-	a = 73;
-	while a <= 120 and remain > 0 do
-		if GetActionInfo(a) then
-			start = nil;
-			remain = qty;
-		else
-			if start == nil then
-				start = a;
-			end
-			remain = remain - 1;
-		end
-		a = a + 1;
-	end
-	if remain > 0 then
-		start = nil;
-	end
-	return start;
-end
-
-function FloTotemBar_TryAddFixupTrapAction()
-
-	if ACTIVE_OPTIONS.baseActionTrap == nil then
-		local pos = FloTotemBar_FindEmptyActions(#FLO_TOTEM_SPELLS.HUNTER.TRAP);
-
-		if pos then
-			FloTotemBar_SetFixupTrap(pos);
+		if self.activeSpell then
+			self.spells[self.activeSpell].algo(self, arg1, ...);
 		end
 	end
 end
@@ -264,23 +211,18 @@ function FloTotemBar_TalentGroupChanged(grp)
 	for k, v in pairs(ACTIVE_OPTIONS.barSettings) do
 		if v.position ~= "auto" then
 			local bar = _G["FloBar"..k];
-                        if bar ~= nil then
-			        v.refPoint = { bar:GetPoint() };
-                        end
+			v.refPoint = { bar:GetPoint() };
 		end
 	end
 
 	FloTotemBar_CheckTalentGroup(grp);
 	for k, v in pairs(ACTIVE_OPTIONS.barSettings) do
 		local bar = _G["FloBar"..k];
-		if bar ~= nil then
-			FloLib_Setup(bar);
-			FloTotemBar_ResetTimers(bar);
-			-- Restore position
-			if v.position ~= "auto" and v.refPoint then
-				bar:ClearAllPoints();
-				bar:SetPoint(unpack(v.refPoint));
-			end
+		FloLib_Setup(bar);
+		-- Restore position
+		if v.position ~= "auto" and v.refPoint then
+			bar:ClearAllPoints();
+			bar:SetPoint(unpack(v.refPoint));
 		end
 	end
 end
@@ -300,16 +242,65 @@ function FloTotemBar_CheckTalentGroup(grp)
 	end
 	for k, v in pairs(ACTIVE_OPTIONS.barSettings) do
 		local bar = _G["FloBar"..k];
-                if bar ~= nil then
-		        bar.globalSettings = ACTIVE_OPTIONS;
-		        bar.settings = v;
-		        FloTotemBar_SetPosition(nil, bar, v.position);
-                else
-                        ACTIVE_OPTIONS.barSettings[k] = nil;
-                end
+		bar.globalSettings = ACTIVE_OPTIONS;
+		bar.settings = v;
+		FloTotemBar_SetPosition(nil, bar, v.position);
 	end
 	FloTotemBar_SetScale(ACTIVE_OPTIONS.scale);
 	FloTotemBar_SetBorders(nil, ACTIVE_OPTIONS.borders);
+end
+
+function FloTotemBar_MigrateVars()
+
+	-- Check new dual spec vars
+	if not FLOTOTEMBAR_OPTIONS[1] then
+		local tmp = FLOTOTEMBAR_OPTIONS;
+		FLOTOTEMBAR_OPTIONS = { [1] = tmp };
+	end
+
+	-- Copy new variables
+	FloLib_CopyPreserve(FLOTOTEMBAR_OPTIONS_DEFAULT, FLOTOTEMBAR_OPTIONS);
+	if FLOTOTEMBAR_OPTIONS[2] then
+		FloLib_CopyPreserve(FLOTOTEMBAR_OPTIONS_DEFAULT[1], FLOTOTEMBAR_OPTIONS[2]);
+	end
+
+	ACTIVE_OPTIONS = FLOTOTEMBAR_OPTIONS[1];
+
+	-- Import old variables
+	if FLOTOTEMBAR_LAYOUT then
+		for k, v in pairs(ACTIVE_OPTIONS.barSettings) do
+			v.position = FLOTOTEMBAR_LAYOUT;
+		end
+	elseif ACTIVE_OPTIONS.layout then
+		for k, v in pairs(ACTIVE_OPTIONS.buttonsOrder) do
+			if k ~= "TRAP" then
+				ACTIVE_OPTIONS.barSettings[k] = FLOTOTEMBAR_BARSETTINGS_DEFAULT[k];
+				ACTIVE_OPTIONS.barSettings[k].position = ACTIVE_OPTIONS.layout;
+			end
+		end
+		ACTIVE_OPTIONS.layout = nil;
+	end
+	if FLOTOTEMBAR_SCALE then
+		ACTIVE_OPTIONS.scale = FLOTOTEMBAR_SCALE;
+	end
+	if FLOTOTEMBAR_BUTTONS_ORDER then
+		for k, v in pairs(FLOTOTEMBAR_BUTTONS_ORDER) do
+			if k ~= "TRAP" then
+				ACTIVE_OPTIONS.barSettings[k].buttonsOrder = v;
+			end
+		end
+	elseif ACTIVE_OPTIONS.buttonsOrder then
+		for k, v in pairs(ACTIVE_OPTIONS.buttonsOrder) do
+			if k ~= "TRAP" then
+				ACTIVE_OPTIONS.barSettings[k].buttonsOrder = v;
+			end
+		end
+		ACTIVE_OPTIONS.buttonsOrder = nil;
+	end
+
+	for k, v in pairs(ACTIVE_OPTIONS.barSettings) do
+		FloLib_CopyPreserve(FLOTOTEMBAR_BARSETTINGS_DEFAULT[k], v);
+	end
 
 end
 
@@ -320,7 +311,7 @@ function FloTotemBar_ReadCmd(line)
 	if cmd == "scale" and tonumber(var) then
 		FloTotemBar_SetScale(var);
 	elseif cmd == "lock" or cmd == "unlock" or cmd == "auto" then
-		for i, v in ipairs({FloBarTRAP, FloBarEARTH}) do
+		for i, v in ipairs({FloBarTRAP, FloBarCALL, FloBarEARTH, FloBarFIRE, FloBarWATER, FloBarAIR}) do
 			FloTotemBar_SetPosition(nil, v, cmd);
 		end
 	elseif cmd == "borders" then
@@ -329,19 +320,6 @@ function FloTotemBar_ReadCmd(line)
 		FloTotemBar_SetBorders(nil, false);
 	elseif cmd == "panic" or cmd == "reset" then
 		FloLib_ResetAddon("FloTotemBar");
-	elseif cmd == "clearfixup" then
-		if ACTIVE_OPTIONS.baseActionTrap then
-			ACTIVE_OPTIONS.baseActionTrap = nil;
-			for i = 73, 120 do
-				local t, id = GetActionInfo(i);
-				if t == "spell" and (id == 13795 or id == 1499 or id == 13809 or id == 13813 or id == 34600 or id == 77769) then
-					PickupAction(i);
-					ClearCursor();
-				end
-			end
-		end
-	elseif cmd == "addfixup" then
-		FloTotemBar_TryAddFixupTrapAction();
 	else
 		DEFAULT_CHAT_FRAME:AddMessage( "FloTotemBar usage :" );
 		DEFAULT_CHAT_FRAME:AddMessage( "/ftb lock|unlock : lock/unlock position" );
@@ -353,64 +331,40 @@ function FloTotemBar_ReadCmd(line)
 	end
 end
 
-function FloTotemBar_UpdateTotem(self, slot, idx)
+function FloTotemBar_UpdateTotem(self, slot)
 
-	if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-		local haveTotem, totemName, startTime, duration, icon = GetTotemInfo(slot);
+	if self.slot == slot then
 
-		-- Find spell
-		if totemName == "" and self.spells[idx].slot == slot then
-			FloLib_ResetTimer(self, idx);
-		elseif self.spells[idx].name == totemName then
-			self.spells[idx].slot = slot;
-			local countdown = _G[self:GetName().."Countdown"..idx];
-			if countdown then
-				local timeleft = GetTotemTimeLeft(slot);
-
-				countdown:SetMinMaxValues(0, duration);
-				countdown:SetValue(timeleft);
-			end
-		end
-	elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
-		if self.slot == slot then
-
-			local haveTotem, totemName, startTime, duration, icon = GetTotemInfo(slot);
-			local timeleft = GetTotemTimeLeft(slot);
-			local countdown = _G[self:GetName().."Countdown"..idx];
-			if countdown then
-				countdown:SetMinMaxValues(0, duration);
-				countdown:SetValue(timeleft);
-			end
-			if timeleft == 0 then
-				FloLib_ResetTimer(self, idx);
-			end
+		local duration = GetTotemTimeLeft(slot);
+		if duration == 0 then
+			FloTotemBar_ResetTimer(self, "");
 		end
 	end
 end
 
-function FloTotemBar_CheckTrapLife(self, spellIdx, timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName, ...)
+function FloTotemBar_CheckTrapLife(self, timestamp, event, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, spellId, spellName, spellSchool, ...)
+	-- [environmentalDamageType]
+	-- [spellName, spellRank, spellSchool]
+	-- [damage, school, [resisted, blocked, absorbed, crit, glancing, crushing]]
 
-	local spell = self.spells[spellIdx];
+	local spell = self.spells[self.activeSpell];
 	local name = string.upper(spell.name);
-	local spellTexture;
 
-	_, _, spellTexture = GetSpellInfo(spell.id);
-	-- bad french localisation
-	if spellName == "Effet Piège immolation" then spellName = "Effet Piège d'immolation" end
-
-	if event ~= nil and strsub(event, 1, 5) == "SPELL" and event ~= "SPELL_CAST_SUCCESS" and event ~= "SPELL_CREATE" and (spell.texture == spellTexture or string.find(string.upper(spellName), name, 1, true)) and destGUID ~= "" then
+	if strsub(event, 1, 5) == "SPELL" and event ~= "SPELL_CAST_SUCCESS" and event ~= "SPELL_CREATE" and string.find(string.upper(spellName), name, 1, true) then
 		if CombatLog_Object_IsA(sourceFlags, COMBATLOG_FILTER_MINE) then
-			FloLib_ResetTimer(self, spellIdx);
+			FloTotemBar_ResetTimer(self, spell.school);
 		else
-			FloTotemBar_TimerRed(self, spellIdx);
+			FloTotemBar_TimerRed(self, spell.school);
 		end
 	end
 end
 
--- For old Serpent Trap I think
-function FloTotemBar_CheckTrap2Life(self, spellIdx, timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, ...)
+function FloTotemBar_CheckTrap2Life(self, timestamp, event, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, ...)
+	-- [environmentalDamageType]
+	-- [spellName, spellRank, spellSchool]
+	-- [damage, school, [resisted, blocked, absorbed, crit, glancing, crushing]]
 
-	local spell = self.spells[spellIdx];
+	local spell = self.spells[self.activeSpell];
 	local name = string.upper(spell.name);
 	local COMBATLOG_FILTER_MY_GUARDIAN = bit.bor(
 		COMBATLOG_OBJECT_AFFILIATION_MINE,
@@ -418,28 +372,17 @@ function FloTotemBar_CheckTrap2Life(self, spellIdx, timestamp, event, hideCaster
 		COMBATLOG_OBJECT_CONTROL_PLAYER,
 		COMBATLOG_OBJECT_TYPE_GUARDIAN
 		);
+ 
 
-	if event ~= nil and strsub(event, 1, 5) == "SWING" and CombatLog_Object_IsA(sourceFlags, COMBATLOG_FILTER_MY_GUARDIAN) then
-		FloLib_ResetTimer(self, spellIdx);
-	end
-end
-
-function FloTotemBar_UpdateSeal(self, spellIdx, timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName, ...)
-	if event == "SPELL_AURA_REMOVED" and CombatLog_Object_IsA(sourceFlags, COMBATLOG_FILTER_MINE) then
-		local spell = self.spells[spellIdx];
-		if (spell.name == spellName) then
-			FloLib_ResetTimer(self, spellIdx);
-		end
+	if strsub(event, 1, 5) == "SWING" and CombatLog_Object_IsA(sourceFlags, COMBATLOG_FILTER_MY_GUARDIAN) then
+		FloTotemBar_ResetTimer(self, spell.school);
 	end
 end
 
 function FloTotemBar_SetupSpell(self, spell, pos)
 
-	local duration, algo, algoIdx, spellName, spellTexture;
-
-        algoIdx = spell.algo;
-        spellName = spell.name;
-        spellTexture = spell.texture;
+	local duration = 30;
+	local algo;
 
 	-- Avoid tainting
 	if not InCombatLockdown() then
@@ -448,45 +391,68 @@ function FloTotemBar_SetupSpell(self, spell, pos)
 		button = _G[name.."Button"..pos];
 		icon = _G[name.."Button"..pos.."Icon"];
 
-		button:SetAttribute("type", "spell");
+		button:SetAttribute("type1", "spell");
 		button:SetAttribute("spell", spell.name);
 
-		icon:SetTexture(spellTexture);
+		icon:SetTexture(spell.texture);
+
+		button.refId = spell.refId;
+
+		if self.totemtype == "EARTH" or self.totemtype == "FIRE" or self.totemtype == "WATER" or self.totemtype=="AIR" then
+			local button;
+			local callSpells = FLO_TOTEM_SPELLS.SHAMAN.CALL;
+
+			button = _G[name.."Button"..pos.."FIRE"];
+			if IsSpellKnown(callSpells[2].id) then
+				button:Show();
+			else
+				button:Hide();
+			end
+			button:SetAttribute("spell", spell.refId);
+			FloSwitchButton_OnUpdate(button);
+
+			button = _G[name.."Button"..pos.."WATER"];
+			if IsSpellKnown(callSpells[3].id) then
+				button:Show();
+			else
+				button:Hide();
+			end
+			button:SetAttribute("spell", spell.refId);
+			FloSwitchButton_OnUpdate(button);
+
+			button = _G[name.."Button"..pos.."AIR"];
+			if IsSpellKnown(callSpells[4].id) then
+				button:Show();
+			else
+				button:Hide();
+			end
+			button:SetAttribute("spell", spell.refId);
+			FloSwitchButton_OnUpdate(button);
+		end
 	end
 
-	if FLO_CLASS_NAME == "SHAMAN" then
+	if FLO_CLASS_NAME ~= "HUNTER" then
+		duration = nil;
 		algo = FloTotemBar_UpdateTotem;
-		duration = spell.duration;
-	elseif FLO_CLASS_NAME == "HUNTER" then
-		duration = spell.duration or 60;
-		algo = ALGO_TRAP[algoIdx];
-	elseif FLO_CLASS_NAME == "PALADIN" then
-		duration = spell.duration or 30;
-		algo = FloTotemBar_UpdateSeal;
+	elseif spell.x then
+		algo = FloTotemBar_CheckTrap2Life;
+	else
+		algo = FloTotemBar_CheckTrapLife;
 	end
 
-	self.spells[pos] = { id = spell.id, name = spellName, addName = spell.addName, duration = duration, algo = algo, talented = spell.talented, talentedName = spell.talentedName };
+	self.spells[pos] = { name = spell.name, duration = duration, algo = algo, school = spell.school };
 
 end
 
 function FloTotemBar_OnSetup(self)
 
-	-- Avoid tainting
-	if not InCombatLockdown() then
-	        if next(self.spells) == nil then
-		        UnregisterStateDriver(self, "visibility")
-	        else
-		        local stateCondition = "nopetbattle,nooverridebar,novehicleui,nopossessbar"
-		        RegisterStateDriver(self, "visibility", "["..stateCondition.."] show; hide")
-	        end
-        end
-
+	FloTotemBar_ResetTimers(self);
 end
 
 function FloTotemBar_UpdatePosition(self)
 
 	-- Avoid tainting when in combat
-	if InCombatLockdown() or self == nil then
+	if InCombatLockdown() then
 		return;
 	end
 
@@ -495,23 +461,27 @@ function FloTotemBar_UpdatePosition(self)
 		return;
 	end
 
-	local layout
-	if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
-		layout = FLO_TOTEM_LAYOUTS[ACTIVE_OPTIONS.barLayout];
-	end
+	local layout = FLO_TOTEM_LAYOUTS[ACTIVE_OPTIONS.barLayout];
 
 	self:ClearAllPoints();
-	if self == FloBarEARTH or self == FloBarTRAP or self == FloBarSEAL then
-		local yOffset = 0;
+	if self == FloBarEARTH or self == FloBarTRAP then
+		local yOffset = -3;
 		local yOffset1 = 0;
 		local yOffset2 = 0;
 		local anchorFrame;
 
 		if not MainMenuBar:IsShown() and not (VehicleMenuBar and VehicleMenuBar:IsShown()) then
 			anchorFrame = UIParent;
-			yOffset = 110 - UIParent:GetHeight();
+			yOffset = 110-UIParent:GetHeight();
 		else
 			anchorFrame = MainMenuBar;
+			if ReputationWatchBar:IsShown() and MainMenuExpBar:IsShown() then
+				yOffset = yOffset + 9;
+			end
+
+			if MainMenuBarMaxLevelBar:IsShown() then
+				yOffset = yOffset - 5;
+			end
 
 			if SHOW_MULTI_ACTIONBAR_2 then
 				yOffset2 = yOffset2 + 45;
@@ -523,23 +493,18 @@ function FloTotemBar_UpdatePosition(self)
 		end
 
 		if FLO_CLASS_NAME == "HUNTER" then
-            if FloAspectBar ~= nil then
-                self:SetPoint("LEFT", FloAspectBar, "RIGHT", 10/ACTIVE_OPTIONS.scale, 0);
-            else
-			    self:SetPoint("BOTTOMLEFT", anchorFrame, "TOPLEFT", 512/ACTIVE_OPTIONS.scale, (yOffset + yOffset2)/ACTIVE_OPTIONS.scale);
-            end
-		elseif FLO_CLASS_NAME == "PALADIN" then
-			self:SetPoint("BOTTOMLEFT", anchorFrame, "TOPLEFT", 320/ACTIVE_OPTIONS.scale, (yOffset + yOffset1)/ACTIVE_OPTIONS.scale);
-		else
-			if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-				self:SetPoint("BOTTOMLEFT", anchorFrame, "TOPLEFT", 464, (yOffset + yOffset1)/ACTIVE_OPTIONS.scale);
-			elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
-				local finalOffset = layout.offset * self:GetHeight();
-				self:SetPoint("BOTTOMLEFT", anchorFrame, "TOPLEFT", 164, (yOffset + yOffset1)/ACTIVE_OPTIONS.scale + finalOffset);
+			if FloAspectBar then
+				self:SetPoint("LEFT", FloAspectBar, "RIGHT", 12, 0);
+			else
+				self:SetPoint("BOTTOMLEFT", anchorFrame, "TOPLEFT", 512/ACTIVE_OPTIONS.scale, (yOffset + yOffset2)/ACTIVE_OPTIONS.scale);
 			end
+		else
+			local finalOffset = layout.offset * self:GetHeight();
+			self:SetPoint("BOTTOMLEFT", anchorFrame, "TOPLEFT", FloBarCALL:GetWidth() + 18, (yOffset + yOffset1)/ACTIVE_OPTIONS.scale + finalOffset);
 		end
 
-	elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC and FLO_CLASS_NAME == "SHAMAN" then
+	elseif FLO_CLASS_NAME == "SHAMAN" then
+
 		self:SetPoint(unpack(layout[self:GetName()]));
 	end
 end
@@ -578,7 +543,6 @@ end
 
 function FloTotemBar_SetBorders(self, visible)
 
-	local k, j;
 	ACTIVE_OPTIONS.borders = visible;
 	for k, v in pairs(ACTIVE_OPTIONS.barSettings) do
 		local bar = _G["FloBar"..k];
@@ -599,7 +563,6 @@ function FloTotemBar_SetPosition(self, bar, mode)
 	CloseDropDownMenus();
 
 	if bar.settings then
-		local savePoints = bar.settings.position ~= mode;
 		bar.settings.position = mode;
 		DEFAULT_CHAT_FRAME:AddMessage(bar:GetName().." position "..mode);
 
@@ -612,9 +575,6 @@ function FloTotemBar_SetPosition(self, bar, mode)
 			-- Force the game to remember position
 			bar:StartMoving();
 			bar:StopMovingOrSizing();
-			if savePoints then
-				bar.settings.refPoint = { bar:GetPoint() };
-			end
 		end
 	end
 end
@@ -655,43 +615,222 @@ function FloTotemBar_SetScale(scale)
 		return;
 	end
 
-	local setPoints = ACTIVE_OPTIONS.scale ~= scale;
 	ACTIVE_OPTIONS.scale = scale;
 
-	for i, v in ipairs({FloBarTRAP, FloBarEARTH}) do
-		local p, a, rp, ox, oy = v:GetPoint();
-		local os = v:GetScale();
-		v:SetScale(scale);
-		if setPoints and p and (a == nil or a == UIParent or a == MainMenuBar) then
-			v:SetPoint(p, a, rp, ox*os/scale, oy*os/scale);
+	for i, v in ipairs({FloBarTRAP, FloBarCALL, FloBarEARTH, FloBarFIRE, FloBarWATER, FloBarAIR}) do
+		if v:IsVisible() then
+			local p, a, rp, ox, oy = v:GetPoint();
+			local os = v:GetScale();
+			v:SetScale(scale);
+			if a == nil or a == UIParent or a == MainMenuBar then
+				v:SetPoint(p, a, rp, ox*os/scale, oy*os/scale);
+			end
 		end
 	end
 	FloTotemBar_UpdatePositions();
 
 end
 
+function FloTotemBar_ResetTimer(self, school)
+
+	self["startTime"..school] = 0;
+	FloTotemBar_OnUpdate(self);
+end
+
 function FloTotemBar_ResetTimers(self)
 
-	for i = 1, 10 do
-		self["startTime"..i] = 0;
-	end
-	FloLib_OnUpdate(self);
+	self.startTime = 0;
+	self.startTime1 = 0;
+	self.startTime2 = 0;
+	self.startTime3 = 0;
+	FloTotemBar_OnUpdate(self);
 end
 
 function FloTotemBar_TimerRed(self, school)
 
 	local countdown = _G[self:GetName().."Countdown"..school];
-	if countdown then
-		countdown:SetStatusBarColor(0.5, 0.5, 0.5);
+	countdown:SetStatusBarColor(0.5, 0.5, 0.5);
+
+end
+
+function FloTotemBar_StartTimer(self, spellName, rank)
+
+	local founded = false;
+	local haveTotem, name, startTime, duration, icon;
+	local countdown;
+	local school;
+
+	-- Special case for Totemic Call
+	if spellName == FLO_TOTEMIC_CALL_SPELL then
+		FloTotemBar_ResetTimer(self, "");
+		return;
+	end
+
+	-- Find spell
+	for i = 1, #self.spells do
+		if string.lower(self.spells[i].name) == string.lower(spellName) then
+			founded = i;
+
+			if FLO_CLASS_NAME == "SHAMAN" then
+				haveTotem, name, startTime, duration, icon = GetTotemInfo(self.slot);
+				school = "";
+			else
+				duration = self.spells[i].duration;
+				startTime = GetTime();
+				school = self.spells[i].school;
+			end
+			break;
+		end
+	end
+
+	if founded then
+
+		self["activeSpell"..school] = founded;
+		self["startTime"..school] = startTime;
+
+		countdown = _G[self:GetName().."Countdown"..school];
+		countdown:SetMinMaxValues(0, duration);
+		countdown:SetStatusBarColor(unpack(SCHOOL_COLORS[school]));
+		FloTotemBar_OnUpdate(self);
+
 	end
 
 end
 
+function FloTotemBar_OnUpdate(self)
+
+	local isActive;
+	local button;
+	local countdown;
+	local timeleft;
+	local duration;
+	local name;
+
+	for i=1, #self.spells do
+
+		name = self:GetName();
+		button = _G[name.."Button"..i];
+
+		spell = self.spells[i];
+
+		isActive = false;
+		for k,v in pairs(SCHOOL_COLORS) do
+
+			if self["activeSpell"..k] == i then
+
+				countdown = _G[name.."Countdown"..k];
+				_, duration = countdown:GetMinMaxValues();
+
+				timeleft = self["startTime"..k] + duration - GetTime();
+				isActive = timeleft > 0;
+
+				if (isActive) then
+					countdown:SetValue(timeleft);
+					break;
+				else
+					self["activeSpell"..k] = nil;
+					countdown:SetValue(0);
+				end
+			end
+		end
+
+		if isActive then
+			button:SetChecked(1);
+		else
+			button:SetChecked(0);
+		end
+
+--		if _G[name.."FIRE"] then
+--			FloSwitchButton_OnUpdate(_G[name.."FIRE");
+--			FloSwitchButton_OnUpdate(_G[name.."WATER");
+--			FloSwitchButton_OnUpdate(_G[name.."AIR");
+--		end
+	end
+end
+
+local CALL_PAGE_OFFSETS = { FIRE = 0, WATER = 4, AIR = 8 };
+local CALL_TEX_COORDS = { FIRE = {0, 0.5, 0.5, 1}, WATER = {0.5, 1, 0.5, 1}, AIR = {0, 0.5, 0, 0.5} };
+
+function FloSwitchButton_GetActionID(self)
+	return 132 + CALL_PAGE_OFFSETS[self.callElement] + self:GetParent():GetParent().slot;
+end
+
+function FloSwitchButton_OnClick(self)
+
+	-- Avoid tainting when in combat
+	if InCombatLockdown() then
+		return;
+	end
+
+	if IsAltKeyDown() then
+		SetMultiCastSpell(FloSwitchButton_GetActionID(self), nil);
+	else
+		SetMultiCastSpell(FloSwitchButton_GetActionID(self), self:GetParent().refId);
+	end
+end
+
+function FloSwitchButton_OnUpdate(self)
+
+	local action = FloSwitchButton_GetActionID(self);
+	local type, id, subType, globalID = GetActionInfo(action);
+	local buttonIcon = _G[self:GetName().."IconTexture"];
+
+	if globalID == self:GetParent().refId then
+		buttonIcon:SetTexture("Interface\\AddOns\\FloTotemBar\\images\\calls");
+		buttonIcon:SetTexCoord(unpack(CALL_TEX_COORDS[self.callElement]));
+		self:SetAlpha(1);
+	else
+		buttonIcon:SetTexture(nil);
+		if not self:GetParent().hover then
+			self:SetAlpha(0);
+		end
+	end
+end
+
 function FloTotemBar_OnEnter(self)
 	FloLib_Button_SetTooltip(self);
+	FloSwitchButton_OnEnter(self);
+end
+
+function FloSwitchButton_OnEnter(self)
+	local name = self:GetName();
+	_G[name.."FIRE"]:SetAlpha(1);
+	_G[name.."WATER"]:SetAlpha(1);
+	_G[name.."AIR"]:SetAlpha(1);
+	self.hover = true;
 end
 
 function FloTotemBar_OnLeave(self)
 	GameTooltip:Hide();
+	FloSwitchButton_OnLeave(self);
+end
+
+function FloSwitchButton_OnLeave(self)
+
+	local buttonIcon;
+	local name = self:GetName();
+
+	buttonIcon = _G[self:GetName().."FIREIconTexture"];
+	if buttonIcon:GetTexture() then
+		_G[name.."FIRE"]:SetAlpha(1);
+	else
+		_G[name.."FIRE"]:SetAlpha(0);
+	end
+
+	buttonIcon = _G[self:GetName().."WATERIconTexture"];
+	if buttonIcon:GetTexture() then
+		_G[name.."WATER"]:SetAlpha(1);
+	else
+		_G[name.."WATER"]:SetAlpha(0);
+	end
+
+	buttonIcon = _G[self:GetName().."AIRIconTexture"];
+	if buttonIcon:GetTexture() then
+		_G[name.."AIR"]:SetAlpha(1);
+	else
+		_G[name.."AIR"]:SetAlpha(0);
+	end
+
+	self.hover = nil;
 end
 
