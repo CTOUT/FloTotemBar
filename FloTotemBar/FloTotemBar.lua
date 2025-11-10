@@ -655,7 +655,11 @@ end
 function FloTotemBar_TimerRed(self, school)
 
 	local countdown = _G[self:GetName().."Countdown"..school];
-	countdown:SetStatusBarColor(0.5, 0.5, 0.5);
+	
+	-- Project Ascension: Check if countdown element exists
+	if countdown then
+		countdown:SetStatusBarColor(0.5, 0.5, 0.5);
+	end
 
 end
 
@@ -696,8 +700,14 @@ function FloTotemBar_StartTimer(self, spellName, rank)
 		self["startTime"..school] = startTime;
 
 		countdown = _G[self:GetName().."Countdown"..school];
-		countdown:SetMinMaxValues(0, duration);
-		countdown:SetStatusBarColor(unpack(SCHOOL_COLORS[school]));
+		
+		-- Project Ascension: Check if countdown element exists
+		-- (TRAP bars may have Countdown4 but not Countdown1-3)
+		if countdown then
+			countdown:SetMinMaxValues(0, duration);
+			countdown:SetStatusBarColor(unpack(SCHOOL_COLORS[school]));
+		end
+		
 		FloTotemBar_OnUpdate(self);
 
 	end
