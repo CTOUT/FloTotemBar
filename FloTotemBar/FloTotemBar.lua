@@ -440,10 +440,19 @@ function FloTotemBar_SetupSpell(self, spell, pos)
 		algo = FloTotemBar_CheckTrapLife;
 	end
 
-	-- Project Ascension: When using dynamic discovery, assign school numbers sequentially for traps
+	-- Project Ascension: When using dynamic discovery, detect school based on spell name for better timer grouping
 	local school = spell.school;
 	if not school and self.totemtype == "TRAP" then
-		school = pos; -- Use position as school number (1, 2, 3, etc.)
+		local lowerName = string.lower(spell.name)
+		if string.find(lowerName, "freezing") or string.find(lowerName, "frost") then
+			school = 2  -- Frost/Blue timer
+		elseif string.find(lowerName, "explosive") or string.find(lowerName, "immolation") or string.find(lowerName, "fire") then
+			school = 1  -- Fire/Red timer
+		elseif string.find(lowerName, "snake") or string.find(lowerName, "black arrow") or string.find(lowerName, "nature") then
+			school = 3  -- Nature/Green timer
+		else
+			school = pos; -- Fallback: Use position as school number
+		end
 	end
 
 	self.spells[pos] = { name = spell.name, duration = duration, algo = algo, school = school };
@@ -687,7 +696,7 @@ function FloTotemBar_StartTimer(self, spellName, rank)
 			else
 				duration = self.spells[i].duration;
 				startTime = GetTime();
-				-- Project Ascension: school may be nil when using dynamic discovery
+				-- Project Ascension: Get school from spell data (set during SetupSpell)
 				school = self.spells[i].school or "";
 			end
 			break;
