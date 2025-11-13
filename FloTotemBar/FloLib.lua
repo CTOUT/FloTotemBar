@@ -323,7 +323,7 @@ function FloLib_Setup(self)
 	-- Project Ascension: Dynamic spell discovery from stance/shapeshift bar
 	if self.useDynamicDiscovery then
 		-- Determine search pattern based on bar type
-		local searchPattern = "aspect|aura|stance|seal|presence";
+		local searchPattern = "trap"; -- Default for trap bar
 		if self.totemtype == "TRAP" then
 			searchPattern = "trap";
 		elseif self.totemtype == "EARTH" or self.totemtype == "FIRE" or 
@@ -333,8 +333,10 @@ function FloLib_Setup(self)
 		
 		self.availableSpells = FloLib_ScanShapeshiftBar(searchPattern);
 		if #self.availableSpells == 0 then
-			-- No aspects/stances/traps found, hide the bar
-			if not InCombatLockdown() then
+			-- No aspects/stances/traps found
+			-- Don't hide the bar on initial load - spellbook might not be ready yet
+			-- Only hide if we've already successfully shown it before (numSpells was > 0)
+			if not InCombatLockdown() and self.hasBeenSetup then
 				self:Hide();
 			end
 			return;
@@ -443,6 +445,8 @@ function FloLib_Setup(self)
 			end
 			self:Show();
 			self:SetWidth(numSpells * 35 + 12 + timerOffset);
+			-- Mark that we've successfully set up the bar at least once
+			self.hasBeenSetup = true;
 
 			for i=1, NUM_SPELL_SLOTS do
 
