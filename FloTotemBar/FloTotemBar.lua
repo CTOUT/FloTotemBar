@@ -16,6 +16,8 @@ local SCHOOL_COLORS = {
 };
 
 local SHOW_WELCOME = true;
+-- Debug toggle (use `/ftb debug` to toggle at runtime)
+local FLOTOTEMBAR_DEBUG = false;
 local FLOTOTEMBAR_OPTIONS_DEFAULT = { [1] = { scale = 1, borders = true, barLayout = "1row", barSettings = {} }, active = 1 };
 FLOTOTEMBAR_OPTIONS = FLOTOTEMBAR_OPTIONS_DEFAULT;
 local FLOTOTEMBAR_BARSETTINGS_DEFAULT = {
@@ -32,7 +34,8 @@ local ACTIVE_OPTIONS = FLOTOTEMBAR_OPTIONS[1];
 local FLO_TOTEMIC_CALL_SPELL = GetSpellInfo(TOTEM_MULTI_CAST_RECALL_SPELLS[1]);
 
 -- Ugly
-local changingSpec = true;
+-- Start with false so initial PLAYER_ENTERING_WORLD triggers setup on addon load/reload
+local changingSpec = false;
 
 -------------------------------------------------------------------------------
 -- Functions
@@ -161,7 +164,10 @@ function FloTotemBar_OnEvent(self, event, arg1, ...)
 
 	if event == "PLAYER_ENTERING_WORLD" or event == "LEARNED_SPELL_IN_TAB" or event == "PLAYER_ALIVE" or event == "PLAYER_LEVEL_UP" or event == "CHARACTER_POINTS_CHANGED" then
 		if not changingSpec then
+			if FLOTOTEMBAR_DEBUG then DEFAULT_CHAT_FRAME:AddMessage("FloTotemBar: FloLib_Setup called on event "..event.." for "..(self and self:GetName() or "nil")); end
 			FloLib_Setup(self);
+		else
+			if FLOTOTEMBAR_DEBUG then DEFAULT_CHAT_FRAME:AddMessage("FloTotemBar: Skipping setup because changingSpec=true on event "..event.." for "..(self and self:GetName() or "nil")); end
 		end
 
 	elseif event == "UNIT_SPELLCAST_SUCCEEDED"  then
@@ -184,6 +190,9 @@ function FloTotemBar_OnEvent(self, event, arg1, ...)
 	elseif event == "VARIABLES_LOADED" then
 		FloTotemBar_MigrateVars();
 		FloTotemBar_CheckTalentGroup(FLOTOTEMBAR_OPTIONS.active);
+		if FLOTOTEMBAR_DEBUG then
+			DEFAULT_CHAT_FRAME:AddMessage("FloTotemBar: VARIABLES_LOADED - active spec "..tostring(FLOTOTEMBAR_OPTIONS.active));
+		end
 
 		-- Hook the UIParent_ManageFramePositions function
 		hooksecurefunc("UIParent_ManageFramePositions", FloTotemBar_UpdatePositions);
@@ -310,6 +319,13 @@ function FloTotemBar_ReadCmd(line)
 
 	if cmd == "scale" and tonumber(var) then
 		FloTotemBar_SetScale(var);
+	elseif cmd == "debug" then
+		FLOTOTEMBAR_DEBUG = not FLOTOTEMBAR_DEBUG;
+		DEFAULT_CHAT_FRAME:AddMessage("FloTotemBar debug: "..(FLOTOTEMBAR_DEBUG and "ON" or "OFF"));
+		return;
+	elseif cmd == "posdump" or cmd == "status" then
+		FloLib_DumpPositions({"FloBarTRAP", "FloBarCALL", "FloBarEARTH", "FloBarFIRE", "FloBarWATER", "FloBarAIR"});
+		return;
 	elseif cmd == "lock" or cmd == "unlock" or cmd == "auto" then
 		for i, v in ipairs({FloBarTRAP, FloBarCALL, FloBarEARTH, FloBarFIRE, FloBarWATER, FloBarAIR}) do
 			FloTotemBar_SetPosition(nil, v, cmd);
@@ -330,6 +346,7 @@ function FloTotemBar_ReadCmd(line)
 		return;
 	end
 end
+
 
 function FloTotemBar_UpdateTotem(self, slot)
 
